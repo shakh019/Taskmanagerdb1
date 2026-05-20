@@ -1,0 +1,63 @@
+version: '3.8'
+
+# Task Management System - Talgatbek Sharafatdin
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: talgatbek-postgres
+    environment:
+      POSTGRES_DB: taskmanager_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talgatbek-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talgatbek-taskmanager
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: taskmanager_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: SharafatdinTalgatbekSecretKeyForJWTTokenGeneration2024VeryLongKey
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    networks:
+      - talgatbek-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:
+  logs_data:
+
+networks:
+  talgatbek-network:
+    driver: bridge
